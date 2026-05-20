@@ -1,0 +1,23 @@
+{
+  "name": "ai-answer-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && node scripts-postbuild.js",
+    "typecheck": "tsc --noEmit",
+    "zip": "npm run build && cd dist && zip -r ../ai-answer-extension.zip ."
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vite": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3"
+  }
+}

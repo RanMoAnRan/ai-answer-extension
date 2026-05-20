@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "AI 网页答题助手 Lite",
+  "description": "识别当前网页题目，调用用户配置的 AI 分析答案并自动选中，不自动提交。",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "AI 答题助手",
+    "default_popup": "popup/index.html"
+  },
+  "options_page": "options/index.html",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.learnin.com.cn/*",
+        "http://www.learnin.com.cn/*",
+        "https://*.chaoxing.com/*",
+        "http://*.chaoxing.com/*",
+        "https://*.zhihuishu.com/*",
+        "http://*.zhihuishu.com/*",
+        "https://*.ouchn.edu.cn/*",
+        "http://*.ouchn.edu.cn/*",
+        "https://*.ouchn.cn/*",
+        "http://*.ouchn.cn/*",
+        "https://*.qingshuxuetang.com/*",
+        "http://*.qingshuxuetang.com/*"
+      ],
+      "js": [
+        "assets/content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
+}
