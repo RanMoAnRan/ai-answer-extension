@@ -11,7 +11,7 @@ let answerStateObserver: MutationObserver | null = null;
 let syncTimer: number | null = null;
 
 function ensureOverlay() {
-  if (!overlay) overlay = new Overlay(runAnswerFlow, window.top !== window, retryFailedQuestions, retryOneQuestion, stopAnswerFlow, locateQuestion, runUnfinishedQuestions, checkBeforeSubmit);
+  if (!overlay) overlay = new Overlay(runAnswerFlow, window.top !== window, retryFailedQuestions, retryOneQuestion, stopAnswerFlow, locateQuestion, runUnfinishedQuestions, checkBeforeSubmit, exportAnswers);
   startAnswerStateObserver();
   return overlay;
 }
@@ -160,6 +160,26 @@ function checkBeforeSubmit() {
   ui.setSummary(summary, unfinished.length ? 'error' : 'success');
 }
 
+function exportAnswers() {
+  const ui = ensureOverlay();
+  const answered = currentResults.filter((item) => item.answer);
+  if (!answered.length) {
+    ui.log('暂无可导出的答案', 'error');
+    return;
+  }
+  const text = answered.map((item) => `${item.index + 1}：${item.answer}`).join('\n');
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `answers-${formatDateForFilename(new Date())}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  ui.log(`已导出 ${answered.length} 条答案`, 'success');
+}
+
 function isQuestionAnswered(question: DetectedQuestion, index: number): boolean {
   const node = document.querySelectorAll<HTMLElement>('.store-question-item-container')[index];
   if (!node) return currentResults[index]?.status === 'success';
@@ -223,6 +243,19 @@ function stopAnswerFlow() {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatDateForFilename(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate())
+  ].join('') + '-' + [
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
+  ].join('');
 }
 
 chrome.runtime.onMessage.addListener((message: any) => {

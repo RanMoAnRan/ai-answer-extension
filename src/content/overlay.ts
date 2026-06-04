@@ -26,6 +26,7 @@ export class Overlay {
   private onStop: () => void;
   private onRunUnfinished: () => void;
   private onCheckBeforeSubmit: () => void;
+  private onExportAnswers: () => void;
 
   constructor(
     onRun: () => void,
@@ -35,7 +36,8 @@ export class Overlay {
     onStop: () => void = () => {},
     onLocateOne: (index: number) => void = () => {},
     onRunUnfinished: () => void = onRun,
-    onCheckBeforeSubmit: () => void = () => {}
+    onCheckBeforeSubmit: () => void = () => {},
+    onExportAnswers: () => void = () => {}
   ) {
     this.onRun = onRun;
     this.onRetryFailed = onRetryFailed;
@@ -44,6 +46,7 @@ export class Overlay {
     this.onLocateOne = onLocateOne;
     this.onRunUnfinished = onRunUnfinished;
     this.onCheckBeforeSubmit = onCheckBeforeSubmit;
+    this.onExportAnswers = onExportAnswers;
     this.root = document.createElement('div');
     this.root.id = 'ai-answer-helper-root';
     this.root.innerHTML = `
@@ -59,6 +62,7 @@ export class Overlay {
           </div>
           <button class="aiah-unfinished">只答未完成题</button>
           <button class="aiah-check">提交前检查</button>
+          <button class="aiah-export">导出答案</button>
           <button class="aiah-retry">重答失败题</button>
           <button class="aiah-settings">设置 API</button>
           <div class="aiah-progress"><span></span><div><i></i></div></div>
@@ -82,6 +86,7 @@ export class Overlay {
     this.stopButton.addEventListener('click', () => this.onStop());
     this.root.querySelector('.aiah-unfinished')?.addEventListener('click', () => this.onRunUnfinished());
     this.root.querySelector('.aiah-check')?.addEventListener('click', () => this.onCheckBeforeSubmit());
+    this.root.querySelector('.aiah-export')?.addEventListener('click', () => this.onExportAnswers());
     this.resultBox.addEventListener('click', (event) => {
       const target = event.target as HTMLElement | null;
       const button = target?.closest<HTMLButtonElement>('[data-result-index]');
@@ -212,9 +217,10 @@ export class Overlay {
       #ai-answer-helper-root .aiah-actions { display: grid; grid-template-columns: 1fr 74px; gap: 8px; }
       #ai-answer-helper-root .aiah-run, #ai-answer-helper-root .aiah-stop { border: 0; border-radius: 12px; padding: 10px; background: #2563eb; color: white; font-weight: 700; cursor: pointer; }
       #ai-answer-helper-root .aiah-stop { background: #ef4444; }
-      #ai-answer-helper-root .aiah-unfinished, #ai-answer-helper-root .aiah-check, #ai-answer-helper-root .aiah-retry, #ai-answer-helper-root .aiah-settings { width: 100%; border: 0; border-radius: 12px; padding: 9px; margin-top: 8px; background: #e9eef8; color: #1e293b; font-weight: 700; cursor: pointer; }
+      #ai-answer-helper-root .aiah-unfinished, #ai-answer-helper-root .aiah-check, #ai-answer-helper-root .aiah-export, #ai-answer-helper-root .aiah-retry, #ai-answer-helper-root .aiah-settings { width: 100%; border: 0; border-radius: 12px; padding: 9px; margin-top: 8px; background: #e9eef8; color: #1e293b; font-weight: 700; cursor: pointer; }
       #ai-answer-helper-root .aiah-retry { background: #fff7ed; color: #9a3412; }
       #ai-answer-helper-root .aiah-check { background: #eef2ff; color: #3730a3; }
+      #ai-answer-helper-root .aiah-export { background: #ecfdf5; color: #166534; }
       #ai-answer-helper-root button:disabled { opacity: .6; cursor: not-allowed; }
       #ai-answer-helper-root .aiah-progress { display: none; margin-top: 10px; font-size: 12px; color: #475569; }
       #ai-answer-helper-root .aiah-progress.active { display: block; }

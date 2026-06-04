@@ -8,7 +8,7 @@ const defaultConfig: AiConfig = {
   apiKey: '',
   model: 'deepseek-chat',
   temperature: 0.1,
-  apiMode: 'responses',
+  apiMode: 'chat',
   reasoningEffort: 'medium',
   store: false
 };

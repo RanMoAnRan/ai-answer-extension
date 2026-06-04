@@ -7,12 +7,9 @@ export async function askQuestion(config: AiConfig, question: DetectedQuestion):
     throw new Error('请先配置 Base URL、API Key 和 Model');
   }
 
-  const base = config.baseUrl.replace(/\/+$/, '');
   const prompt = buildAnswerPrompt(question);
   const mode = config.apiMode || 'responses';
-  const url = mode === 'responses'
-    ? (/\/responses$/i.test(base) ? base : `${base}/responses`)
-    : (/\/chat\/completions$/i.test(base) ? base : `${base}/chat/completions`);
+  const url = buildApiUrl(config.baseUrl, mode);
 
   const res = await fetchWithUpstreamRetry(url, {
     method: 'POST',
@@ -88,15 +85,15 @@ export async function testMinimalResponse(config: AiConfig): Promise<{ raw: stri
   if (!config.baseUrl || !config.apiKey || !config.model) {
     throw new Error('请先配置 Base URL、API Key 和 Model');
   }
-  const base = config.baseUrl.replace(/\/+$/, '');
-  const url = /\/responses$/i.test(base) ? base : `${base}/responses`;
+  const mode = config.apiMode || 'responses';
+  const url = buildApiUrl(config.baseUrl, mode);
   const res = await fetchWithUpstreamRetry(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${config.apiKey}`
     },
-    body: JSON.stringify({
+    body: JSON.stringify(mode === 'responses' ? {
       model: config.model,
       input: [
         {
@@ -109,13 +106,31 @@ export async function testMinimalResponse(config: AiConfig): Promise<{ raw: stri
       reasoning: { effort: config.reasoningEffort || 'medium' },
       store: config.store ?? false,
       max_output_tokens: 128
+    } : {
+      model: config.model,
+      temperature: config.temperature ?? 0.1,
+      messages: [
+        { role: 'user', content: '只回答 OK' }
+      ],
+      max_tokens: 128
     })
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`最小测试失败：${res.status} ${text.slice(0, 500)}`);
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error(`最小测试返回非 JSON：${text.slice(0, 500)}`); }
-  return { raw: extractResponsesText(json) || text.slice(0, 500), json };
+  const raw = mode === 'responses'
+    ? extractResponsesText(json)
+    : json?.choices?.[0]?.message?.content;
+  return { raw: raw || text.slice(0, 500), json };
+}
+
+function buildApiUrl(baseUrl: string, mode: 'chat' | 'responses') {
+  const base = baseUrl
+    .replace(/\/+$/, '')
+    .replace(/\/chat\/completions$/i, '')
+    .replace(/\/responses$/i, '');
+  return mode === 'responses' ? `${base}/responses` : `${base}/chat/completions`;
 }
 
 async function fetchWithUpstreamRetry(url: string, init: RequestInit, attempts = 3): Promise<Response> {
