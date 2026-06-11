@@ -29,3 +29,8 @@ export interface AiAnswer {
   confidence?: number;
   reason?: string;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}

@@ -1,4 +1,4 @@
-import type { AiConfig, DetectedQuestion, AiAnswer } from '../types';
+import type { AiConfig, DetectedQuestion, AiAnswer, ChatMessage } from '../types';
 import { buildAnswerPrompt } from './prompts';
 import { parseAiAnswer } from './parser';
 
@@ -61,6 +61,86 @@ export async function askQuestion(config: AiConfig, question: DetectedQuestion):
   }
 
   return { raw, parsed: parseAiAnswer(raw) };
+}
+
+export async function askChat(config: AiConfig, messages: ChatMessage[]): Promise<{ raw: string }> {
+  if (!config.baseUrl || !config.apiKey || !config.model) {
+    throw new Error('请先配置 Base URL、API Key 和 Model');
+  }
+  const chatMessages = messages
+    .map((item) => ({ role: item.role, content: item.content.trim() }))
+    .filter((item) => item.content);
+  if (!chatMessages.length) throw new Error('请输入聊天内容');
+
+  const mode = config.apiMode || 'responses';
+  const url = buildApiUrl(config.baseUrl, mode);
+  const res = await fetchWithUpstreamRetry(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`
+    },
+    body: JSON.stringify(mode === 'responses' ? {
+      model: config.model,
+      instructions: '你是答题助手。只输出最终答案，不要解析，不要说明原因，不要复述题目，不要展示思考过程。多题时每行只写“题号. 选项/答案”，例如“46. D located”。不需要输出 JSON。',
+      input: [
+        {
+          role: 'user',
+          content: [
+            { type: 'input_text', text: formatChatHistory(chatMessages) }
+          ]
+        }
+      ],
+      reasoning: { effort: config.reasoningEffort || 'medium' },
+      store: config.store ?? false,
+      max_output_tokens: 4096
+    } : {
+      model: config.model,
+      temperature: config.temperature ?? 0.3,
+      messages: [
+        { role: 'system', content: '你是答题助手。只输出最终答案，不要解析，不要说明原因，不要复述题目，不要展示思考过程。多题时每行只写“题号. 选项/答案”，例如“46. D located”。不需要输出 JSON。' },
+        ...chatMessages
+      ],
+      max_tokens: 4096
+    })
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => '');
+    throw new Error(`AI 聊天请求失败：${res.status} ${errorText.slice(0, 200)}`);
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const errorText = await res.text().catch(() => '');
+    throw new Error(`AI 聊天响应不是 JSON：${contentType} ${errorText.slice(0, 120)}`);
+  }
+
+  const json = await res.json();
+  const raw = mode === 'responses'
+    ? extractResponsesText(json)
+    : extractChatCompletionsText(json);
+  if (!raw || typeof raw !== 'string') {
+    throw new Error(`${mode === 'responses' ? 'AI 聊天响应缺少 output_text/output content' : 'AI 聊天响应缺少 choices[0].message.content'}：${JSON.stringify(json).slice(0, 300)}`);
+  }
+  return { raw };
+}
+
+function formatChatHistory(messages: ChatMessage[]) {
+  return messages.map((item) => `${item.role === 'user' ? '用户' : '助手'}：${item.content}`).join('\n\n');
+}
+
+function extractChatCompletionsText(json: any): string | undefined {
+  const message = json?.choices?.[0]?.message;
+  if (typeof message?.content === 'string' && message.content) return message.content;
+  if (Array.isArray(message?.content)) {
+    const texts = message.content
+      .map((item: any) => typeof item?.text === 'string' ? item.text : typeof item?.content === 'string' ? item.content : '')
+      .filter(Boolean);
+    if (texts.length) return texts.join('');
+  }
+  if (typeof json?.choices?.[0]?.text === 'string' && json.choices[0].text) return json.choices[0].text;
+  return undefined;
 }
 
 function extractResponsesText(json: any): string | undefined {

@@ -1,9 +1,13 @@
-import type { AiConfig, DetectedQuestion } from '../types';
-import { askQuestion, testMinimalResponse } from '../ai/client';
+import type { AiConfig, DetectedQuestion, ChatMessage } from '../types';
+import { askChat, askQuestion, testMinimalResponse } from '../ai/client';
 
 chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
   if (message?.type === 'AI_ASK') {
     handleAsk(message.config, message.question).then(sendResponse);
+    return true;
+  }
+  if (message?.type === 'AI_CHAT') {
+    handleChat(message.config, message.messages || []).then(sendResponse);
     return true;
   }
   if (message?.type === 'OPEN_OPTIONS') {
@@ -45,6 +49,15 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
 async function handleAsk(config: AiConfig, question: DetectedQuestion) {
   try {
     const data = await askQuestion(config, question);
+    return { ok: true, data };
+  } catch (error: any) {
+    return { ok: false, error: error?.message || String(error) };
+  }
+}
+
+async function handleChat(config: AiConfig, messages: ChatMessage[]) {
+  try {
+    const data = await askChat(config, messages);
     return { ok: true, data };
   } catch (error: any) {
     return { ok: false, error: error?.message || String(error) };

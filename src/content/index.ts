@@ -1,9 +1,11 @@
-import type { AiConfig, DetectedQuestion } from '../types';
+import type { AiConfig, DetectedQuestion, ChatMessage } from '../types';
 import { detectQuestions } from './adapters/generic';
 import { fillAnswer } from './filler';
+import { ChatOverlay } from './chatOverlay';
 import { Overlay, type QuestionResultView } from './overlay';
 
 let overlay: Overlay | null = null;
+let chatOverlay: ChatOverlay | null = null;
 let lastFailedIndexes: number[] = [];
 let stopRequested = false;
 let currentResults: QuestionResultView[] = [];
@@ -11,9 +13,34 @@ let answerStateObserver: MutationObserver | null = null;
 let syncTimer: number | null = null;
 
 function ensureOverlay() {
+  const existingNodes = Array.from(document.querySelectorAll<HTMLElement>('#ai-answer-helper-root'));
+  existingNodes.slice(1).forEach((node) => node.remove());
+  const existing = existingNodes[0];
+  if (overlay && !document.getElementById('ai-answer-helper-root')) overlay = null;
+  if (existing && !overlay) existing.remove();
+
   if (!overlay) overlay = new Overlay(runAnswerFlow, window.top !== window, retryFailedQuestions, retryOneQuestion, stopAnswerFlow, locateQuestion, runUnfinishedQuestions, checkBeforeSubmit, exportAnswers);
   startAnswerStateObserver();
   return overlay;
+}
+
+function ensureChatOverlay() {
+  if (window.top !== window) return null;
+
+  const existingNodes = Array.from(document.querySelectorAll<HTMLElement>('#ai-chat-helper-root'));
+  existingNodes.slice(1).forEach((node) => node.remove());
+
+  const existing = existingNodes[0];
+  if (chatOverlay && !document.getElementById('ai-chat-helper-root')) chatOverlay = null;
+  if (existing && !chatOverlay) existing.remove();
+
+  if (!chatOverlay) chatOverlay = new ChatOverlay(sendChatMessage);
+  chatOverlay.show();
+
+  document.querySelectorAll<HTMLElement>('#ai-chat-helper-root').forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  return chatOverlay;
 }
 
 async function getConfig(): Promise<AiConfig | null> {
@@ -25,6 +52,22 @@ async function getConfig(): Promise<AiConfig | null> {
 async function ask(config: AiConfig, question: DetectedQuestion): Promise<any> {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: 'AI_ASK', config, question }, resolve);
+  });
+}
+
+async function sendChatMessage(messages: ChatMessage[]): Promise<string> {
+  const config = await getConfig();
+  if (!config?.apiKey || !config?.baseUrl || !config?.model) {
+    throw new Error('请先在插件设置页配置 Base URL、API Key 和 Model');
+  }
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: 'AI_CHAT', config, messages }, (res: any) => {
+      if (res?.ok) {
+        resolve(res.data.raw);
+        return;
+      }
+      reject(new Error(res?.error || '聊天请求失败'));
+    });
   });
 }
 
@@ -258,12 +301,24 @@ function formatDateForFilename(date: Date) {
   ].join('');
 }
 
-chrome.runtime.onMessage.addListener((message: any) => {
+chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
   if (message?.type === 'AI_ANSWER_SHOW') {
-    ensureOverlay();
+    if (window.top === window) ensureOverlay();
+    sendResponse({ ok: true });
+    return undefined;
   }
   if (message?.type === 'AI_ANSWER_RUN') {
-    ensureOverlay();
-    runAnswerFlow();
+    if (window.top === window) {
+      ensureOverlay();
+      runAnswerFlow();
+    }
+    sendResponse({ ok: true });
+    return undefined;
   }
+  if (message?.type === 'AI_CHAT_SHOW') {
+    ensureChatOverlay();
+    sendResponse({ ok: true });
+    return undefined;
+  }
+  return undefined;
 });

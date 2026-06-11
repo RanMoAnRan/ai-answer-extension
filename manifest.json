@@ -24,18 +24,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.learnin.com.cn/*",
-        "http://www.learnin.com.cn/*",
-        "https://*.chaoxing.com/*",
-        "http://*.chaoxing.com/*",
-        "https://*.zhihuishu.com/*",
-        "http://*.zhihuishu.com/*",
-        "https://*.ouchn.edu.cn/*",
-        "http://*.ouchn.edu.cn/*",
-        "https://*.ouchn.cn/*",
-        "http://*.ouchn.cn/*",
-        "https://*.qingshuxuetang.com/*",
-        "http://*.qingshuxuetang.com/*"
+        "http://*/*",
+        "https://*/*"
       ],
       "js": [
         "assets/content.js"

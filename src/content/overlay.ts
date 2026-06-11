@@ -53,7 +53,10 @@ export class Overlay {
       <div class="aiah-panel">
         <div class="aiah-head">
           <strong>AI 答题助手${isSubFrame ? ' · 子页面' : ''}</strong>
-          <button class="aiah-mini" title="收起/展开">—</button>
+          <div class="aiah-head-actions">
+            <button class="aiah-mini" title="收起/展开">—</button>
+            <button class="aiah-close" title="关闭">×</button>
+          </div>
         </div>
         <div class="aiah-body">
           <div class="aiah-actions">
@@ -103,6 +106,7 @@ export class Overlay {
       chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
     });
     this.root.querySelector('.aiah-mini')?.addEventListener('click', () => this.root.classList.toggle('aiah-collapsed'));
+    this.root.querySelector('.aiah-close')?.addEventListener('click', () => this.close());
     this.enableDrag();
     this.restorePosition();
     this.setProgress(0, 0);
@@ -150,6 +154,10 @@ export class Overlay {
       const active = this.resultBox.querySelector<HTMLElement>(`[data-result-index="${activeIndex}"]`);
       active?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
     }
+  }
+
+  close() {
+    this.root.remove();
   }
 
   private enableDrag() {
@@ -211,7 +219,9 @@ export class Overlay {
       #ai-answer-helper-root { position: fixed; right: 18px; bottom: 18px; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; }
       #ai-answer-helper-root .aiah-panel { width: 360px; background: white; border: 1px solid #dbe3ef; border-radius: 16px; box-shadow: 0 18px 50px rgba(15,23,42,.22); overflow: hidden; }
       #ai-answer-helper-root .aiah-head { height: 42px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: linear-gradient(135deg,#2563eb,#7c3aed); color: white; cursor: move; }
-      #ai-answer-helper-root .aiah-mini { border: 0; background: rgba(255,255,255,.2); color: white; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; }
+      #ai-answer-helper-root .aiah-head-actions { display: flex; gap: 6px; }
+      #ai-answer-helper-root .aiah-mini, #ai-answer-helper-root .aiah-close { border: 0; background: rgba(255,255,255,.2); color: white; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; }
+      #ai-answer-helper-root .aiah-close { font-size: 18px; line-height: 28px; }
       #ai-answer-helper-root .aiah-body { padding: 12px; }
       #ai-answer-helper-root.aiah-collapsed .aiah-body { display: none; }
       #ai-answer-helper-root .aiah-actions { display: grid; grid-template-columns: 1fr 74px; gap: 8px; }
