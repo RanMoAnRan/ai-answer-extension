@@ -63,6 +63,14 @@ export async function askQuestion(config: AiConfig, question: DetectedQuestion):
   return { raw, parsed: parseAiAnswer(raw) };
 }
 
+const CHAT_SYSTEM_PROMPT = `你是一个通用聊天助手，也可以作为答题助手。
+
+根据用户最后一条消息自动选择回复模式：
+1. 普通聊天、咨询、解释、改写、翻译、代码等请求：正常、自然、清晰地回答。
+2. 用户明确要求做题、选择答案、填空、判断正误、只要答案、给最终答案，或消息明显是一道题目时：只输出最终答案，不要解析，不要说明原因，不要复述题目，不要展示思考过程。多题时每行只写“题号. 选项/答案”，例如“46. D located”。
+
+无论是否启用推理能力，最终给用户看的回复必须写在可见的 message.content / output_text 中，不要只放在 reasoning_content 中。`;
+
 export async function askChat(config: AiConfig, messages: ChatMessage[]): Promise<{ raw: string }> {
   if (!config.baseUrl || !config.apiKey || !config.model) {
     throw new Error('请先配置 Base URL、API Key 和 Model');
@@ -82,7 +90,7 @@ export async function askChat(config: AiConfig, messages: ChatMessage[]): Promis
     },
     body: JSON.stringify(mode === 'responses' ? {
       model: config.model,
-      instructions: '你是答题助手。只输出最终答案，不要解析，不要说明原因，不要复述题目，不要展示思考过程。多题时每行只写“题号. 选项/答案”，例如“46. D located”。不需要输出 JSON。',
+      instructions: CHAT_SYSTEM_PROMPT,
       input: [
         {
           role: 'user',
@@ -98,7 +106,7 @@ export async function askChat(config: AiConfig, messages: ChatMessage[]): Promis
       model: config.model,
       temperature: config.temperature ?? 0.3,
       messages: [
-        { role: 'system', content: '你是答题助手。只输出最终答案，不要解析，不要说明原因，不要复述题目，不要展示思考过程。多题时每行只写“题号. 选项/答案”，例如“46. D located”。不需要输出 JSON。' },
+        { role: 'system', content: CHAT_SYSTEM_PROMPT },
         ...chatMessages
       ],
       max_tokens: 4096

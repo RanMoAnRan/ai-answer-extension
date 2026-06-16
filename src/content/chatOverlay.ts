@@ -76,7 +76,7 @@ export class ChatOverlay {
     this.sendButton.disabled = true;
     this.sendButton.textContent = '发送中';
     try {
-      const answer = await this.onChat([currentMessage]);
+      const answer = await this.onChat([...this.history]);
       this.history.push({ role: 'assistant', content: answer });
       this.appendMessage('assistant', answer);
     } catch (error) {
